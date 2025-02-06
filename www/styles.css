@@ -13,7 +13,9 @@ body{
     justify-content: center;
     align-items: center;
 }
-
+.square span {
+    will-change: transform, opacity;
+}
 .square span:nth-child(1){
     position: absolute;
     top: 0;

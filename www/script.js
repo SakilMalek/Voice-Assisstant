@@ -69,8 +69,7 @@ function canvasApp() {
 	function init() {
 		wait = 1;
 		count = wait - 1;
-		numToAddEachFrame = 8;
-
+		numToAddEachFrame = 4; // Reduce the number of particles added each frame
 		//particle color
 		r = 0;
 		g = 72;
@@ -325,28 +324,28 @@ function canvasApp() {
 }
 
 
-$(function () {
-	$("#slider-range").slider({
-		range: false,
-		min: 20,
-		max: 500,
-		value: 280,
-		slide: function (event, ui) {
-			console.log(ui.value);
-			sphereRad = ui.value;
-		}
-	});
-});
+// $(function () {
+// 	$("#slider-range").slider({
+// 		range: false,
+// 		min: 20,
+// 		max: 500,
+// 		value: 280,
+// 		slide: function (event, ui) {
+// 			console.log(ui.value);
+// 			sphereRad = ui.value;
+// 		}
+// 	});
+// });
 
-$(function () {
-	$("#slider-test").slider({
-		range: false,
-		min: 1.0,
-		max: 2.0,
-		value: 1,
-		step: 0.01,
-		slide: function (event, ui) {
-			radius_sp = ui.value;
-		}
-	});
-});
+// $(function () {
+// 	$("#slider-test").slider({
+// 		range: false,
+// 		min: 1.0,
+// 		max: 2.0,
+// 		value: 1,
+// 		step: 0.01,
+// 		slide: function (event, ui) {
+// 			radius_sp = ui.value;
+// 		}
+// 	});
+// });

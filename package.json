@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "particles.js": "^2.0.0",
+    "siriwave": "^2.4.0"
+  }
+}
