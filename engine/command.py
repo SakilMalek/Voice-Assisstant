@@ -15,34 +15,54 @@ def speak(text):
     eel.receiverText(text)
     engine.runAndWait()
 
+import speech_recognition as sr
+
 @eel.expose
 def takecommand():
     r = sr.Recognizer()
 
-    with sr.Microphone() as source:
-        print('listening....')
-        eel.DisplayMessage('listening....')
-        r.pause_threshold = 1
-        r.adjust_for_ambient_noise(source)
-        
-        audio = r.listen(source, 10, 6)
-
     try:
-        print('recognizing')
-        eel.DisplayMessage('recognizing....')
-        query = r.recognize_google(audio, language='en-in')
-        print(f"user said: {query}")
-        eel.DisplayMessage(query)
-        
-        return str(query).lower()
-       
-    except Exception as e:
-        print(f"Recognition error: {e}")
-        return ""
+        # Check if microphone is available
+        if not sr.Microphone.list_microphone_names():
+            print("No microphone found.")
+            eel.DisplayMessage("No microphone detected. Please connect a microphone.")
+            return ""
 
+        with sr.Microphone() as source:
+            print('Listening...')
+            eel.DisplayMessage('Listening...')
+            r.pause_threshold = 1  # Wait 1 second after the user stops speaking
+            r.adjust_for_ambient_noise(source)  # Adjust for background noise
+
+            # Listen for audio input
+            print('Please speak...')
+            audio = r.listen(source, timeout=10, phrase_time_limit=6)
+
+        # Recognize speech using Google Speech Recognition
+        print('Recognizing...')
+        eel.DisplayMessage('Recognizing...')
+        query = r.recognize_google(audio, language='en-in')
+        print(f"User said: {query}")
+        eel.DisplayMessage(query)
+
+        return str(query).lower()
+
+    except sr.UnknownValueError:
+        print("Google Speech Recognition could not understand the audio.")
+        eel.DisplayMessage("Sorry, I didn't catch that. Could you repeat?")
+        return ""
+    except sr.RequestError as e:
+        print(f"Could not request results from Google Speech Recognition service; {e}")
+        eel.DisplayMessage("Sorry, there was an issue with the speech recognition service.")
+        return ""
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        eel.DisplayMessage("Sorry, an unexpected error occurred.")
+        return ""
 @eel.expose
 def allCommands(message=1):
     message = str(message)
+    
     
     if message == "1":
         query = takecommand()
@@ -74,7 +94,7 @@ def allCommands(message=1):
 
                 if "mobile" in preferance:
                     if "send message" in query or "send sms" in query: 
-                        speak("what message to send")
+                        speak("What message you want to send")
                         message = takecommand()
                         sendMessage(message, contact_no, name)
                     elif "phone call" in query:

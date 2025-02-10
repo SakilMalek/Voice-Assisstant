@@ -6,6 +6,12 @@
     "no-inline-styles": "off",
     "button-type": "off",
     "axe/aria": "off",
-    "axe/name-role-value": "off"
+    "axe/name-role-value": "off",
+    "axe/parsing": [
+      "default",
+      {
+        "duplicate-id-active": "off"
+      }
+    ]
   }
 }
