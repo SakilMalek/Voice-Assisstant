@@ -5,9 +5,10 @@ import time
 
 
 def speak(text):
+    """Converts text to speech using pyttsx3."""
     text = str(text)
     engine = pyttsx3.init('sapi5')
-    voices = engine.getProperty('voices') 
+    voices = engine.getProperty('voices')
     engine.setProperty('voice', voices[0].id)
     engine.setProperty('rate', 174)
     eel.DisplayMessage(text)
@@ -15,9 +16,8 @@ def speak(text):
     eel.receiverText(text)
     engine.runAndWait()
 
-
 def takecommand():
-
+    """Takes voice input from the user and converts it to text."""
     r = sr.Recognizer()
 
     with sr.Microphone() as source:
@@ -25,7 +25,6 @@ def takecommand():
         eel.DisplayMessage('listening....')
         r.pause_threshold = 1
         r.adjust_for_ambient_noise(source)
-        
         audio = r.listen(source, 10, 8)
 
     try:
@@ -35,7 +34,6 @@ def takecommand():
         print(f"user said: {query}")
         eel.DisplayMessage(query)
         time.sleep(2)
-       
     except Exception as e:
         return ""
     
@@ -43,6 +41,7 @@ def takecommand():
 
 @eel.expose
 def allCommands(message=1):
+    """Handles all user commands."""
     if message == 1:
         query = takecommand()
         print(query)
@@ -51,28 +50,27 @@ def allCommands(message=1):
         query = message
         eel.senderText(query)
     
+     # Define keyword variations
+    message_keywords = {"send message", "write a message", "type a message", "can you send a message", "text", "message"}
+    call_keywords = {"make a call", "please make a call", "can you call", "call", "dial"}
     try:
-        query = query.lower()  # Normalize query for better matching
-
-        # Define keyword variations
-        message_keywords = {"send message", "write a message", "type a message", "can you send a message", "text", "message"}
-        call_keywords = {"make a call", "please make a call", "can you call", "call", "dial"}
+        query = query.lower()
 
         if "open" in query:
             from engine.features import openCommand
             openCommand(query)
-            
+        elif "set an alarm" in query or "set alarm" in query:
+            from engine.features import setAlarm
+            setAlarm(query)
+        elif "add a note" in query:
+            from engine.features import addNote
+            addNote(query)
         elif "close" in query:
             from engine.features import closeApplication
-            app_name = query.replace("close", "").strip()
-            if app_name:
-                closeApplication(app_name)
-
-
+            closeApplication(query)
         elif "on youtube" in query:
             from engine.features import PlayYoutube
             PlayYoutube(query)
-
         elif any(kw in query for kw in message_keywords) or any(kw in query for kw in call_keywords):
             from engine.features import findContact, whatsApp, makeCall, sendMessage
             contact_no, name = findContact(query)
@@ -106,7 +104,6 @@ def allCommands(message=1):
                         message_type = "video call"
 
                     whatsApp(contact_no, query, message_type, name)
-
         else:
             from engine.features import chatBot
             chatBot(query)

@@ -8,74 +8,64 @@ import webbrowser
 import sqlite3
 from playsound import playsound
 import eel
+import re
 import pvporcupine
 import pyaudio
 import pyautogui
 import requests
 import urllib
 from engine.command import speak
-from engine.config import ASSISTANT_NAME  # Playing assiatnt sound function
+from engine.config import ASSISTANT_NAME
 from engine.helper import extract_yt_term, remove_words
 
-
+# Initialize SQLite database connection
 con = sqlite3.connect("friday.db")
 cursor = con.cursor()
 
-
 @eel.expose
 def playAssistantSound():
+    """Plays the assistant's startup sound."""
     music_dir = "www\\assets\\audio\\start_sound.mp3"
     playsound(music_dir)
-    
+
 def openCommand(query):
+    """Opens an application or website based on the user's query."""
     query = query.replace(ASSISTANT_NAME, "").replace("open", "").strip()
     query = query.lower().replace(" ", "")  # Normalize by removing spaces and making lowercase
 
     try:
-        # Normalize database query
+        # Fetch system commands from the database
         cursor.execute('SELECT path FROM sys_command')
         results = cursor.fetchall()
-
-        # Convert database entries to lowercase without spaces
         app_dict = {row[0].lower().replace(" ", ""): row[0] for row in results}
 
         if query in app_dict:
             speak(f"Opening {app_dict[query]}")
             os.startfile(app_dict[query])
-            query = ""  # Clear query after execution
             return
 
-        # Check for web commands
+        # Fetch web commands from the database
         cursor.execute('SELECT url FROM web_command')
         results = cursor.fetchall()
-
         web_dict = {row[0].lower().replace(" ", ""): row[0] for row in results}
 
         if query in web_dict:
             speak(f"Opening {web_dict[query]}")
             webbrowser.open(web_dict[query])
-            query = ""  # Clear query after execution
             return
 
-        # Last attempt using os.system
+        # Fallback to os.system
         speak(f"Opening {query}")
-        try:
-            os.system(f'start {query}')
-        except:
-            speak("Not found")
-        
-        query = ""  # Clear query after execution
+        os.system(f'start {query}')
 
     except Exception as e:
         speak("Something went wrong")
-        print("Error:", str(e))
-    
-    finally:
-        query = ""  # Ensure query is cleared at the end
+        logging.error(f"Error in openCommand: {e}")
+
 def closeApplication(query):
-    """Closes an application based on its name and prevents query persistence."""
+    """Closes an application based on its name."""
     try:
-        app_name = query.replace("close", "").strip().lower()  # Extract app name
+        app_name = query.replace("close", "").strip().lower()
 
         if not app_name:
             speak("Please specify the application to close.")
@@ -87,45 +77,34 @@ def closeApplication(query):
                 speak(f"{app_name} is not running.")
             else:
                 speak(f"Closing {app_name}.")
-                                
+
     except Exception as e:
         speak("Something went wrong while closing the application.")
-        print(f"Error closing application: {e}")
-    
-    finally:
-        query = ""  # Ensure query is cleared        
+        logging.error(f"Error closing application: {e}")
+
 def PlayYoutube(query):
-    """Plays a video on YouTube based on the user's query and resets query after execution."""
+    """Plays a video on YouTube based on the user's query."""
     try:
-        search_term = extract_yt_term(query)  # Extract search term
+        search_term = extract_yt_term(query)
 
         if search_term:
             speak(f"Playing {search_term} on YouTube.")
-            try:
-                kit.playonyt(search_term)  # Primary method
-            except:
-                webbrowser.open(f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(search_term)}")  # Backup method
+            kit.playonyt(search_term)  # Primary method
         else:
             speak("No valid search term found.")
-            
+
     except Exception as e:
         speak("An error occurred while playing the video.")
-        print(f"Error in PlayYoutube: {e}")
-    
-    finally:
-        query = ""  # Ensure query is cleared
+        logging.error(f"Error in PlayYoutube: {e}")
 
 def hotword():
-    """ Listens for a wake word and triggers a shortcut (Win+J) when detected. """
+    """Listens for a wake word and triggers a shortcut (Win+J) when detected."""
     porcupine = None
     paud = None
     audio_stream = None
 
     try:
-        # Initialize Porcupine with pre-trained keywords
         porcupine = pvporcupine.create(keywords=["jarvis", "alexa"])
-
-        # Initialize PyAudio
         paud = pyaudio.PyAudio()
         audio_stream = paud.open(
             rate=porcupine.sample_rate,
@@ -137,39 +116,30 @@ def hotword():
 
         print("Listening for hotwords...")
 
-        # Loop for continuous hotword detection
         while True:
             keyword = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
             keyword = struct.unpack_from("h" * porcupine.frame_length, keyword)
 
-            # Process keyword detection
             if porcupine.process(keyword) >= 0:
                 print("Hotword detected!")
-
-                # Simulate shortcut key press (Win+J)
                 pyautogui.hotkey("win", "j")
-
                 time.sleep(2)  # Prevent repeated triggers
 
     except KeyboardInterrupt:
         print("\nHotword detection stopped by user.")
-    
     except Exception as e:
         print(f"Error: {e}")
-
     finally:
-        # Cleanup resources
         if porcupine:
             porcupine.delete()
         if audio_stream:
             audio_stream.close()
         if paud:
             paud.terminate()
-
         print("Resources released. Exiting...")
 
-# find contacts
 def findContact(query):
+    """Finds a contact in the database."""
     words_to_remove = [ASSISTANT_NAME, 'make', 'a', 'to', 'can', 'you', 'if', 'phone', 'call', 'send', 'message', 'whatsapp', 'video']
     query = remove_words(query, words_to_remove)
 
@@ -193,7 +163,6 @@ def findContact(query):
     except Exception as e:
         speak(f"An error occurred: {str(e)}")
         return 0, 0
-
 
 def whatsApp(mobile_no, message, flag, name):
     try:
@@ -237,50 +206,33 @@ def whatsApp(mobile_no, message, flag, name):
     except Exception as e:
         speak(f"An error occurred: {str(e)}")
         print(f"Error: {str(e)}")
-        
-        
-# chat bot
-
 
 def chatBot(query):
+    """Interacts with the Ollama chatbot API."""
     user_input = query.lower().strip()
-
-    # Ollama API endpoint
     url = "http://localhost:11434/api/generate"
-
-    # Structured prompt to optimize response quality
     refined_prompt = f"You are an AI assistant. Provide a clear, concise, and accurate response to the following user query:\n\n{user_input}"
 
-    # JSON payload for the API request
     payload = {
         "model": "llama3",
         "prompt": refined_prompt,
         "stream": False,
-        "temperature": 0.7,  # Adjust for response randomness
-        "max_tokens": 200  # Limit response length
+        "temperature": 0.7,
+        "max_tokens": 200
     }
 
     try:
-        # Sending request to Ollama
         response = requests.post(url, json=payload)
         response_data = response.json()
 
-        # Extract and refine the response
         if "response" in response_data:
             response_text = response_data["response"].strip()
-
-            # Basic text cleaning (remove disclaimers, redundant phrases)
             refined_response = post_process_response(response_text)
-
             print("Chatbot response:", refined_response)
-
-            # Display and speak the message
             eel.DisplayMessage(refined_response)
             eel.receiverText(refined_response)
             speak(refined_response)
-
             return refined_response
-
         else:
             return handle_error()
 
@@ -310,43 +262,45 @@ def handle_error():
     speak(error_message)
     return error_message
 
-# android automation
-
 def makeCall(name, mobileNo):
-    mobileNo =mobileNo.replace(" ", "")
-    speak("Calling "+name)
-    command = 'adb shell am start -a android.intent.action.CALL -d tel:'+mobileNo
+    """Makes a phone call using ADB."""
+    mobileNo = mobileNo.replace(" ", "")
+    speak("Calling " + name)
+    command = f'adb shell am start -a android.intent.action.CALL -d tel:{mobileNo}'
     os.system(command)
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
-import subprocess
-import time
-import logging
-from engine.command import speak
-
 def sendMessage(message, mobileNo, name):
+    """Sends an SMS to a contact using ADB.
+
+    Args:
+        message: The message content to send.
+        mobileNo: The recipient's phone number.
+        name: The recipient's name.
+    """
     try:
         speak(f"Sending message to {name}")
         logging.info(f"Preparing to send message to {name} ({mobileNo})")
 
         # Ensure correct phone number format (remove spaces & country code if needed)
-        mobileNo = mobileNo.replace(" ", "").replace("+91", "")  
+        mobileNo = mobileNo.replace(" ", "").replace("+91", "")
+
+        # Replace spaces with `%s` to handle spaces in the message
+        formatted_message = message.replace(" ", "%s")
 
         # Open SMS app with pre-filled phone number
         subprocess.run(f'adb shell am start -a android.intent.action.VIEW -d sms:{mobileNo}', shell=True)
         time.sleep(3)  # Wait for the messaging app to open
 
         # Type the message
-        subprocess.run(f'adb shell input text "{message}"', shell=True)
+        subprocess.run(f'adb shell input text "{formatted_message}"', shell=True)
         time.sleep(1)  # Wait before sending
 
         # Press the "Send" button (Works on most devices)
         # subprocess.run("adb shell input keyevent 66", shell=True)  # Keyevent 66 = Enter key
 
         # Alternative method (if Enter key doesn't work)
-        subprocess.run("adb shell input tap 977 1489", shell=True)  # Adjust coordinates for the Send button
+        send_button_coordinates = "977 1489"  # Adjust coordinates for the Send button
+        subprocess.run(f'adb shell input tap {send_button_coordinates}', shell=True)
         time.sleep(1)
 
         speak(f"Message sent successfully to {name}")
@@ -355,4 +309,136 @@ def sendMessage(message, mobileNo, name):
     except Exception as e:
         logging.error(f"Error sending message: {e}")
         speak("Sorry, there was an error sending the message.")
+def setAlarm(query):
+    """Sets an alarm on an Android device using ADB.
 
+    Args:
+        query: The user's query containing the alarm time (e.g., "Set an alarm for 5:00 PM").
+    """
+    try:
+        # Extract time from the query using regex
+        time_pattern = re.compile(r'(\d{1,2}):(\d{2})\s*(AM|PM)?', re.IGNORECASE)
+        match = time_pattern.search(query)
+        
+        if not match:
+            speak("I couldn't find a valid time in your request.")
+            return False
+
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        period = match.group(3).upper() if match.group(3) else None
+
+        # Convert to 24-hour format
+        if period == "PM" and hour != 12:
+            hour += 12
+        elif period == "AM" and hour == 12:
+            hour = 0
+
+        # Validate the time
+        if not (0 <= hour < 24 and 0 <= minute < 60):
+            speak("The time you provided is invalid.")
+            return False
+
+        # Format the time for display
+        alarm_time = f"{hour:02d}:{minute:02d}"
+
+        # Try the direct ADB command first
+        adb_command = (
+            f'adb shell am start -a com.android.deskclock.action.SET_ALARM '
+            f'-e android.intent.extra.HOUR {hour} '
+            f'-e android.intent.extra.MINUTES {minute} '
+            f'--ez android.intent.extra.SKIP_UI true'
+        )
+        result = subprocess.run(adb_command, shell=True, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            speak(f"Alarm set for {alarm_time}.")
+            return True
+
+        # Fallback to UI interaction if the direct command fails
+        speak("Falling back to manual alarm setup.")
+
+        # Open the alarm app
+        open_alarm_command = 'adb shell am start -n com.android.deskclock/com.android.deskclock.AlarmClock'
+        subprocess.run(open_alarm_command, shell=True)
+        time.sleep(3)
+
+        # Simulate tapping the "Add Alarm" button
+        add_alarm_button_coordinates = "913 2101"  # Adjust coordinates as needed
+        subprocess.run(f'adb shell input tap {add_alarm_button_coordinates}', shell=True)
+        time.sleep(1)
+
+        # Simulate setting the hour
+        subprocess.run(f'adb shell input text "{hour}"', shell=True)
+        time.sleep(1)
+
+        # Simulate setting the minute
+        subprocess.run(f'adb shell input text "{minute}"', shell=True)
+        time.sleep(1)
+
+        # Simulate tapping the "Save" button
+        save_button_coordinates = "975 405"  # Adjust coordinates as needed
+        subprocess.run(f'adb shell input tap {save_button_coordinates}', shell=True)
+
+        speak(f"Alarm set for {alarm_time}.")
+        return True
+
+    except Exception as e:
+        speak("Something went wrong while setting the alarm.")
+        logging.error(f"Error in set_alarm_adb: {e}")
+        return False
+
+def addNote(query):
+    """Adds a note on an Android device using ADB.
+
+    Args:
+        query: The user's query containing the note content (e.g., "Add a note: Buy groceries").
+    """
+    try:
+        # Extract the note content from the query
+        note_content = query.replace("add a note", "").replace(":", "").strip()
+
+        if not note_content:
+            speak("I couldn't find any content for the note.")
+            return False
+
+        # Replace spaces with `%s` to handle spaces in the note content
+        formatted_note_content = note_content.replace(" ", "%s")
+
+        # Open the notes app
+        open_notes_command = 'adb shell am start -n com.miui.notes/.ui.NotesListActivity'
+        result = subprocess.run(open_notes_command, shell=True, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            speak("Failed to open the notes app. Please ensure your phone is connected and ADB is properly configured.")
+            logging.error(f"ADB Error: {result.stderr}")
+            return False
+
+        # Wait for the notes app to open
+        time.sleep(3)
+
+        # Simulate tapping the "New Note" button
+        new_note_button_coordinates = "909 2120"  # Adjust coordinates as needed
+        subprocess.run(f'adb shell input tap {new_note_button_coordinates}', shell=True)
+        time.sleep(1)
+
+        # Simulate typing the note content
+        subprocess.run(f'adb shell input text "{formatted_note_content}"', shell=True)
+        time.sleep(1)
+
+        # Simulate tapping the "Save" or "Done" button
+        save_button_coordinates = "957 175"  # Adjust coordinates as needed
+        subprocess.run(f'adb shell input tap {save_button_coordinates}', shell=True)
+        time.sleep(1)
+
+        # Simulate pressing the back button
+        back_button_coordinates = "103 196"  # Coordinates for the back button
+        subprocess.run(f'adb shell input tap {back_button_coordinates}', shell=True)
+
+        speak("Note added successfully.")
+        return True
+
+    except Exception as e:
+        speak("Something went wrong while adding the note.")
+        logging.error(f"Error in addNote: {e}")
+        return False
