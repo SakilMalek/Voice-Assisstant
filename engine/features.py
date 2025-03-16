@@ -388,21 +388,13 @@ def setAlarm(query):
         logging.error(f"Error in set_alarm_adb: {e}")
         return False
 
-def addNote(query):
-    """Adds a note on an Android device using ADB.
-
-    Args:
-        query: The user's query containing the note content (e.g., "Add a note: Buy groceries").
-    """
+def addNote(note_content):
+    """Adds a note based on user input."""
     try:
-        # Extract the note content from the query
-        note_content = query.replace("add a note", "").replace(":", "").strip()
-
         if not note_content:
-            speak("I couldn't find any content for the note.")
+            speak("I couldn't hear any note content. Please try again.")
             return False
 
-        # Replace spaces with `%s` to handle spaces in the note content
         formatted_note_content = note_content.replace(" ", "%s")
 
         # Open the notes app
@@ -411,34 +403,25 @@ def addNote(query):
 
         if result.returncode != 0:
             speak("Failed to open the notes app. Please ensure your phone is connected and ADB is properly configured.")
-            logging.error(f"ADB Error: {result.stderr}")
             return False
 
-        # Wait for the notes app to open
-        time.sleep(3)
+        time.sleep(3)  # Wait for app to open
 
-        # Simulate tapping the "New Note" button
-        new_note_button_coordinates = "909 2120"  # Adjust coordinates as needed
-        subprocess.run(f'adb shell input tap {new_note_button_coordinates}', shell=True)
+        # Simulate tapping "New Note" button
+        subprocess.run('adb shell input tap 909 2120', shell=True)
         time.sleep(1)
 
-        # Simulate typing the note content
+        # Type the note content
         subprocess.run(f'adb shell input text "{formatted_note_content}"', shell=True)
         time.sleep(1)
 
-        # Simulate tapping the "Save" or "Done" button
-        save_button_coordinates = "957 175"  # Adjust coordinates as needed
-        subprocess.run(f'adb shell input tap {save_button_coordinates}', shell=True)
+        # Save and exit
+        subprocess.run('adb shell input tap 957 175', shell=True)
         time.sleep(1)
-
-        # Simulate pressing the back button
-        back_button_coordinates = "103 196"  # Coordinates for the back button
-        subprocess.run(f'adb shell input tap {back_button_coordinates}', shell=True)
 
         speak("Note added successfully.")
         return True
 
     except Exception as e:
         speak("Something went wrong while adding the note.")
-        logging.error(f"Error in addNote: {e}")
         return False

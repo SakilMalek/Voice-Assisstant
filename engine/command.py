@@ -62,9 +62,14 @@ def allCommands(message=1):
         elif "set an alarm" in query or "set alarm" in query:
             from engine.features import setAlarm
             setAlarm(query)
-        elif "add a note" in query:
+        elif "add a note" in query or "add note" in query:
             from engine.features import addNote
-            addNote(query)
+            speak("Which note do you want to add?")
+            note_content = takecommand()  # Listen to user's response
+            if note_content:
+                addNote(note_content)  # Pass the note to the function
+            else:
+                speak("I couldn't hear the note. Please try again.")
         elif "close" in query:
             from engine.features import closeApplication
             closeApplication(query)
