@@ -1,117 +1,119 @@
 $(document).ready(function () {
-  $(".text").textillate({
-    loop: true,
-    sync: true,
-    in: { effect: "bounceIn" },
-    out: { effect: "bounceOut" },
-  });
+  /*** 🟢 Cache frequently used DOM elements ***/
+  const $text = $(".text");
+  const $siriMessage = $(".siri-message");
+  const $micBtn = $("#MicBtn");
+  const $oval = $("#Oval");
+  const $siriWave = $("#SiriWave");
+  const $chatbox = $("#chatbox");
+  const $sendBtn = $("#SendBtn");
 
-  // Check if SiriWave already exists before creating it
-  if (!siriWave) {
-    var siriWave = new SiriWave({
-      container: document.getElementById("siri-container"),
-      width: 800,
-      height: 200,
-      style: "ios9",
-      amplitude: 1,
-      speed: 0.3,
-      autostart: true,
+  /*** 🟢 Initialize text animations using Textillate.js ***/
+  function initializeTextAnimations() {
+    $text.textillate({
+      loop: true,  // Keep looping the animation
+      sync: true,  // Synchronize all letters
+      in: { effect: "bounceIn" },  // Entrance animation
+      out: { effect: "bounceOut" },  // Exit animation
+    });
+
+    $siriMessage.textillate({
+      loop: true,
+      sync: true,
+      in: { effect: "fadeInUp", sync: true },  // Fade-in effect
+      out: { effect: "fadeOutUp", sync: true },  // Fade-out effect
     });
   }
 
-  // Siri message animation
-  $(".siri-message").textillate({
-    loop: true,
-    sync: true,
-    in: { effect: "fadeInUp", sync: true },
-    out: { effect: "fadeOutUp", sync: true },
-  });
-
-  // Mic button click event
-  $("#MicBtn").click(function () {
-    eel.playAssistantSound();
-    $("#Oval").attr("hidden", true);
-    $("#SiriWave").attr("hidden", false);
-
-    // Updated Eel function call with promise handling
-    eel
-      .allCommands(1)()
-      .then(function (result) {
-        console.log("Command processed:", result);
-      })
-      .catch(function (err) {
-        console.error("Error processing command:", err);
+  /*** 🟢 Initialize SiriWave animation ***/
+  function initializeSiriWave() {
+    if (!window.siriWave) {  // Prevent duplicate initialization
+      window.siriWave = new SiriWave({
+        container: document.getElementById("siri-container"),
+        width: 800,  // Set width of the wave
+        height: 200,  // Set height of the wave
+        style: "ios9",  // SiriWave style
+        amplitude: 1,  // Wave height intensity
+        speed: 0.3,  // Wave speed
+        autostart: true,  // Start animation automatically
       });
-  });
-  function doc_keyUp(e) {
-    // this would test for whichever key is 40 (down arrow) and the ctrl key at the same time
-
-    if (e.key === "j" && e.metaKey) {
-      eel.playAssistantSound();
-      $("#Oval").attr("hidden", true);
-      $("#SiriWave").attr("hidden", false);
-      eel.allCommands()();
     }
   }
-  document.addEventListener("keyup", doc_keyUp, false);
 
+  /*** 🟢 Handle Mic button click ***/
+  function handleMicButtonClick() {
+    eel.playAssistantSound();  // Play assistant sound
+    $oval.attr("hidden", true);  // Hide oval animation
+    $siriWave.attr("hidden", false);  // Show SiriWave animation
 
-  // to play assisatnt 
-function PlayAssistant(message) {
-
-  if (message != "") {
-
-      $("#Oval").attr("hidden", true);
-      $("#SiriWave").attr("hidden", false);
-      eel.allCommands(message);
-      $("#chatbox").val("")
-      $("#MicBtn").attr('hidden', false);
-      $("#SendBtn").attr('hidden', true);
-
+    eel
+      .allCommands(1)()  // Execute voice command processing
+      .then((result) => console.log("Command processed:", result))
+      .catch((err) => console.error("Error processing command:", err));
   }
 
-}
-
-// toogle fucntion to hide and display mic and send button 
-function ShowHideButton(message) {
-  if (message.length == 0) {
-      $("#MicBtn").attr('hidden', false);
-      $("#SendBtn").attr('hidden', true);
+  /*** 🟢 Handle keyboard shortcut (Ctrl + J) ***/
+  function handleKeyboardShortcut(e) {
+    if (e.key === "j" && e.metaKey) {  // Check if user pressed Ctrl + J
+      eel.playAssistantSound();
+      $oval.attr("hidden", true);
+      $siriWave.attr("hidden", false);
+      eel.allCommands()();  // Trigger voice command processing
+    }
   }
-  else {
-      $("#MicBtn").attr('hidden', true);
-      $("#SendBtn").attr('hidden', false);
+
+  /*** 🟢 Play assistant (send message) ***/
+  function playAssistant(message) {
+    if (message.trim() !== "") {  // Ensure message is not empty
+      $oval.attr("hidden", true);
+      $siriWave.attr("hidden", false);
+      eel.allCommands(message);  // Send message to backend
+      $chatbox.val("");  // Clear chatbox input
+      toggleButtonsVisibility("");  // Reset button visibility
+    }
   }
-}
 
-// key up event handler on text box
-$("#chatbox").keyup(function () {
+  /*** 🟢 Toggle Mic and Send buttons visibility ***/
+  function toggleButtonsVisibility(message) {
+    if (message.length === 0) {
+      $micBtn.attr("hidden", false);  // Show Mic button
+      $sendBtn.attr("hidden", true);  // Hide Send button
+    } else {
+      $micBtn.attr("hidden", true);  // Hide Mic button
+      $sendBtn.attr("hidden", false);  // Show Send button
+    }
+  }
 
-  let message = $("#chatbox").val();
-  ShowHideButton(message)
+  /*** 🟢 Handle Send button click ***/
+  function handleSendButtonClick() {
+    const message = $chatbox.val();
+    playAssistant(message);  // Process the message
+  }
 
+  /*** 🟢 Handle Enter key press in chatbox ***/
+  function handleChatboxKeyPress(e) {
+    if (e.which === 13) {  // Check if Enter key was pressed
+      const message = $chatbox.val();
+      playAssistant(message);
+    }
+  }
+
+  /*** 🟢 Initialize event listeners ***/
+  function initializeEventListeners() {
+    $micBtn.click(handleMicButtonClick);  // Handle Mic button click
+    $(document).on("keyup", handleKeyboardShortcut);  // Handle keyboard shortcut (Ctrl + J)
+    $chatbox.on("keyup", () => toggleButtonsVisibility($chatbox.val()));  // Toggle buttons on typing
+    $sendBtn.click(handleSendButtonClick);  // Handle Send button click
+    $chatbox.keypress(handleChatboxKeyPress);  // Handle Enter key press
+  }
+
+  /*** 🟢 Main initialization function ***/
+  function initialize() {
+    initializeTextAnimations();  // Start text animations
+    initializeSiriWave();  // Initialize SiriWave
+    initializeEventListeners();  // Attach event listeners
+  }
+
+  /*** 🟢 Start the application ***/
+  initialize();
 });
-
-// send button event handler
-$("#SendBtn").click(function () {
-
-  let message = $("#chatbox").val()
-  PlayAssistant(message)
-
-});
-
-
-// enter press event handler on chat box
-$("#chatbox").keypress(function (e) {
-  key = e.which;
-  if (key == 13) {
-      let message = $("#chatbox").val()
-      PlayAssistant(message)
-  }
-
-
-
-})
-});
-
-

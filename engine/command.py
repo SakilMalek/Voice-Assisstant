@@ -1,73 +1,111 @@
 import pyttsx3
 import speech_recognition as sr
 import eel
-import time
 
+# Initialize the Text-to-Speech (TTS) engine
+engine = pyttsx3.init('sapi5')
+engine.setProperty('rate', 174)  # Default speech rate
+engine.setProperty('voice', engine.getProperty('voices')[0].id)  # Select voice
 
-def speak(text):
-    """Converts text to speech using pyttsx3."""
-    text = str(text)
-    engine = pyttsx3.init('sapi5')
-    voices = engine.getProperty('voices')
-    engine.setProperty('voice', voices[0].id)
-    engine.setProperty('rate', 174)
-    eel.DisplayMessage(text)
-    engine.say(text)
-    eel.receiverText(text)
-    engine.runAndWait()
+def speak(text, async_mode=False):
+    """
+    Converts text to speech and updates UI with spoken text.
+    
+    :param text: The text to be spoken.
+    :param async_mode: If True, speaks asynchronously without blocking execution.
+    """
+    try:
+        text = str(text).strip()
+        if not text:
+            return  # Avoid speaking empty strings
+        
+        # Update UI
+        eel.DisplayMessage(text)
+        eel.receiverText(text)
 
-def takecommand():
-    """Takes voice input from the user and converts it to text."""
-    r = sr.Recognizer()
+        # Adjust speech rate dynamically
+        engine.setProperty('rate', 150 if len(text) > 100 else 174)
 
+        if async_mode:
+            engine.say(text)  # Non-blocking mode
+        else:
+            engine.say(text)
+            engine.runAndWait()  # Blocking mode
+    
+    except Exception as e:
+        print(f"❌ Speech Error: {e}")
+        eel.DisplayMessage("Speech error occurred.")
+
+def take_command():
+    """
+    Captures voice input from the user and converts it to text.
+    
+    :return: Recognized speech as a lowercase string, or an empty string if recognition fails.
+    """
+    recognizer = sr.Recognizer()
     with sr.Microphone() as source:
-        print('listening....')
-        eel.DisplayMessage('listening....')
-        r.pause_threshold = 1
-        r.adjust_for_ambient_noise(source)
-        audio = r.listen(source, 10, 8)
+        eel.DisplayMessage("Listening...")
+        print("🎤 Listening...")
+
+        recognizer.pause_threshold = 1
+        recognizer.adjust_for_ambient_noise(source, duration=1)  # Reduce background noise
+
+        try:
+            audio = recognizer.listen(source, timeout=10, phrase_time_limit=8)
+        except sr.WaitTimeoutError:
+            eel.DisplayMessage("No input detected.")
+            print("⚠ No voice detected.")
+            return ""
 
     try:
-        print('recognizing')
-        eel.DisplayMessage('recognizing....')
-        query = r.recognize_google(audio, language='en-in')
-        print(f"user said: {query}")
+        eel.DisplayMessage("Recognizing...")
+        print("⏳ Recognizing...")
+        
+        query = recognizer.recognize_google(audio, language="en-in")
         eel.DisplayMessage(query)
-        time.sleep(2)
+        print(f"✅ User said: {query}")
+        
+        return query.lower()
+
+    except sr.UnknownValueError:
+        eel.DisplayMessage("Sorry, I couldn't understand that.")
+        print("⚠ Speech was unclear.")
+    except sr.RequestError:
+        eel.DisplayMessage("Speech recognition service unavailable.")
+        print("⚠ Google Speech API issue.")
     except Exception as e:
-        return ""
-    
-    return query.lower()
+        eel.DisplayMessage("Error in voice processing.")
+        print(f"❌ Error: {e}")
+
+    return ""
 
 @eel.expose
-def allCommands(message=1):
-    """Handles all user commands."""
-    if message == 1:
-        query = takecommand()
-        print(query)
-        eel.senderText(query)
-    else:
-        query = message
-        eel.senderText(query)
+def all_commands(message=1):
+    """
+    Handles all user commands based on voice input or UI input.
     
-     # Define keyword variations
-    message_keywords = {"send message", "write a message", "type a message", "can you send a message", "text", "message"}
-    call_keywords = {"make a call", "please make a call", "can you call", "call", "dial"}
-    try:
-        query = query.lower()
+    :param message: If 1, captures voice command; otherwise, processes given message.
+    """
+    query = take_command() if message == 1 else str(message).lower()
+    eel.senderText(query)
 
+    # Define keyword variations for specific tasks
+    message_keywords = {"send message", "write a message", "text", "message"}
+    call_keywords = {"make a call", "call", "dial"}
+
+    try:
         if "open" in query:
             from engine.features import openCommand
             openCommand(query)
-        elif "set an alarm" in query or "set alarm" in query:
+        elif "set an alarm" in query:
             from engine.features import setAlarm
             setAlarm(query)
-        elif "add a note" in query or "add note" in query:
+        elif "add a note" in query:
             from engine.features import addNote
             speak("Which note do you want to add?")
-            note_content = takecommand()  # Listen to user's response
+            note_content = take_command()
             if note_content:
-                addNote(note_content)  # Pass the note to the function
+                addNote(note_content)
             else:
                 speak("I couldn't hear the note. Please try again.")
         elif "close" in query:
@@ -76,44 +114,29 @@ def allCommands(message=1):
         elif "on youtube" in query:
             from engine.features import PlayYoutube
             PlayYoutube(query)
-        elif any(kw in query for kw in message_keywords) or any(kw in query for kw in call_keywords):
+        elif any(kw in query for kw in message_keywords | call_keywords):
             from engine.features import findContact, whatsApp, makeCall, sendMessage
             contact_no, name = findContact(query)
-
-            if contact_no != 0:
+            
+            if contact_no:
                 speak("Which mode do you want to use: WhatsApp or Mobile?")
-                preference = takecommand().lower()
-                print(preference)
-
+                preference = take_command().lower()
+                
                 if "mobile" in preference:
-                    if any(kw in query for kw in message_keywords):  
-                        speak("What message should I send?")
-                        message = takecommand()
-                        sendMessage(message, contact_no, name)
-
-                    elif any(kw in query for kw in call_keywords):  
-                        makeCall(name, contact_no)
-                    else:
-                        speak("Please try again.")
-
-                elif "whatsapp" in preference:
-                    message_type = ""
                     if any(kw in query for kw in message_keywords):
-                        message_type = "message"
                         speak("What message should I send?")
-                        query = takecommand()
-
+                        message = take_command()
+                        sendMessage(message, contact_no, name)
                     elif any(kw in query for kw in call_keywords):
-                        message_type = "call"
-                    else:
-                        message_type = "video call"
-
-                    whatsApp(contact_no, query, message_type, name)
+                        makeCall(name, contact_no)
+                elif "whatsapp" in preference:
+                    speak("What message should I send?")
+                    message = take_command()
+                    whatsApp(contact_no, message, "message", name)
         else:
             from engine.features import chatBot
             chatBot(query)
-
     except Exception as e:
-        print("Error:", e)
-
+        print(f"Error: {e}")
+    
     eel.ShowHood()

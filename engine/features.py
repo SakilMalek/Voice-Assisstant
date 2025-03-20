@@ -217,8 +217,8 @@ def chatBot(query):
         "model": "llama3",
         "prompt": refined_prompt,
         "stream": False,
-        "temperature": 0.7,
-        "max_tokens": 200
+        "temperature": 0.5,
+        "max_tokens": 150
     }
 
     try:
@@ -303,6 +303,9 @@ def sendMessage(message, mobileNo, name):
         subprocess.run(f'adb shell input tap {send_button_coordinates}', shell=True)
         time.sleep(1)
 
+        subprocess.run('adb shell input tap 108 212', shell=True)
+        time.sleep(1)
+        
         speak(f"Message sent successfully to {name}")
         logging.info(f"Message sent successfully to {name}")
 
@@ -419,6 +422,9 @@ def addNote(note_content):
         subprocess.run('adb shell input tap 957 175', shell=True)
         time.sleep(1)
 
+        subprocess.run('adb shell input tap 108 212', shell=True)
+        time.sleep(1)
+        
         speak("Note added successfully.")
         return True
 

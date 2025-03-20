@@ -1,95 +1,63 @@
 $(document).ready(function () {
 
-
-
-    // Display Speak Message
-    eel.expose(DisplayMessage)
+    /*** 🟢 Message Display Handlers ***/
+    // Expose function to display messages via Eel
+    eel.expose(DisplayMessage);
     function DisplayMessage(message) {
-
-        $(".siri-message li:first").text(message);
-        $('.siri-message').textillate('start');
-
+        $(".siri-message li:first").text(message);  // Set message text
+        $('.siri-message').textillate('start');  // Start text animation effect
     }
 
-    // Display hood
-    eel.expose(ShowHood)
-    function ShowHood() {
-        $("#Oval").attr("hidden", false);
-        $("#SiriWave").attr("hidden", true);
-    }
-
-    eel.expose(senderText)
-    function senderText(message) {
+    /*** 🟢 Chat Message Display (Sender & Receiver) ***/
+    function appendMessage(type, message) {
         var chatBox = document.getElementById("chat-canvas-body");
-        if (message.trim() !== "") {
-            chatBox.innerHTML += `<div class="row justify-content-end mb-4">
-            <div class = "width-size">
-            <div class="sender_message">${message}</div>
-        </div>`; 
-    
-            // Scroll to the bottom of the chat box
-            chatBox.scrollTop = chatBox.scrollHeight;
+
+        if (message.trim() !== "") {  // Ensure message is not empty
+            chatBox.innerHTML += `
+                <div class="row justify-content-${type === "sender" ? "end" : "start"} mb-4">
+                    <div class="width-size">
+                        <div class="${type}_message">${message}</div>
+                    </div>
+                </div>`;
+            
+            chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll to the latest message
         }
     }
 
-    eel.expose(receiverText)
-    function receiverText(message) {
+    // Expose sender and receiver message functions to Eel
+    eel.expose(senderText);
+    function senderText(message) { appendMessage("sender", message); }
 
-        var chatBox = document.getElementById("chat-canvas-body");
-        if (message.trim() !== "") {
-            chatBox.innerHTML += `<div class="row justify-content-start mb-4">
-            <div class = "width-size">
-            <div class="receiver_message">${message}</div>
-            </div>
-        </div>`; 
-    
-            // Scroll to the bottom of the chat box
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-        
+    eel.expose(receiverText);
+    function receiverText(message) { appendMessage("receiver", message); }
+
+    /*** 🟢 UI Visibility Handlers ***/
+    // Function to toggle UI visibility between elements
+    function toggleVisibility(hideSelector, showSelector) {
+        $(hideSelector).attr("hidden", true);
+        $(showSelector).attr("hidden", false);
     }
 
-    
-    // Hide Loader and display Face Auth animation
-    eel.expose(hideLoader)
-    function hideLoader() {
+    // Expose functions to Eel for UI changes
+    eel.expose(ShowHood);
+    function ShowHood() { toggleVisibility("#SiriWave", "#Oval"); }
 
-        $("#Loader").attr("hidden", true);
-        $("#FaceAuth").attr("hidden", false);
+    eel.expose(hideLoader);
+    function hideLoader() { toggleVisibility("#Loader", "#FaceAuth"); }
 
-    }
-    // Hide Face auth and display Face Auth success animation
-    eel.expose(hideFaceAuth)
-    function hideFaceAuth() {
+    eel.expose(hideFaceAuth);
+    function hideFaceAuth() { toggleVisibility("#FaceAuth", "#FaceAuthSuccess"); }
 
-        $("#FaceAuth").attr("hidden", true);
-        $("#FaceAuthSuccess").attr("hidden", false);
+    eel.expose(hideFaceAuthSuccess);
+    function hideFaceAuthSuccess() { toggleVisibility("#FaceAuthSuccess", "#HelloGreet"); }
 
-    }
-    // Hide success and display 
-    eel.expose(hideFaceAuthSuccess)
-    function hideFaceAuthSuccess() {
-
-        $("#FaceAuthSuccess").attr("hidden", true);
-        $("#HelloGreet").attr("hidden", false);
-
-    }
-
-
-    // Hide Start Page and display blob
-    eel.expose(hideStart)
+    /*** 🟢 Start Page Handler ***/
+    eel.expose(hideStart);
     function hideStart() {
-
-        $("#Start").attr("hidden", true);
-
-        setTimeout(function () {
-            $("#Oval").addClass("animate__animated animate__zoomIn");
-
-        }, 1000)
-        setTimeout(function () {
-            $("#Oval").attr("hidden", false);
-        }, 1000)
+        $("#Start").attr("hidden", true);  // Hide Start screen
+        setTimeout(() => {
+            $("#Oval").addClass("animate__animated animate__zoomIn").attr("hidden", false);  // Animate and show Oval
+        }, 1000);
     }
-
 
 });
