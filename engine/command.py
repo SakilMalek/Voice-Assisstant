@@ -80,7 +80,7 @@ def take_command():
     return ""
 
 @eel.expose
-def all_commands(message=1):
+def allCommands(message=1):
     """
     Handles all user commands based on voice input or UI input.
     
